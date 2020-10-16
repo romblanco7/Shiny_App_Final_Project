@@ -1,0 +1,44 @@
+---
+title: "raw_data"
+author: "Rom Blanco"
+date: "10/15/2020"
+output: html_document
+---
+
+```{r}
+library(readxl)
+library(dplyr)
+library(janitor)
+library(tidyverse)
+library(ggplot2)
+
+  
+# Loading raw data
+
+Location_data <- read_xlsx("place.pop.precip.war.xlsx", sheet = 3, trim_ws = TRUE)
+# Population_data <- read_xlsx("place.pop.precip.war.xlsx", sheet = 4, trim_ws = TRUE)
+# Precipitation_data <- read_xlsx("place.pop.precip.war.xlsx", sheet = 5, trim_ws = TRUE)
+# War_data <- read_xlsx("place.pop.precip.war.xlsx", sheet = 6, trim_ws = TRUE)
+
+#Cleaning Location Data
+
+Loc_data_clean <- Location_data %>%
+  clean_names() %>%
+  select("primary", "population_data_name", "climate_data_name", "war_data_ccode", "war_data_state_name", "latitude", "longitude") 
+  
+Country_Locs <- ggplot(Loc_data_clean, aes(x = latitude, 
+           y = longitude,label = primary))+
+  geom_point() +
+  geom_text(size = 3, color = "blue", (aes(label=primary))) +
+  theme_classic() +
+  labs(title= "Location of Countries", 
+       x = "Latitude",
+       y = "Longitude")
+Country_Locs
+
+#cleaning Population Dataframe
+# Population_data_2 <- Population_data 
+# %>% clean_names()
+
+```
+
