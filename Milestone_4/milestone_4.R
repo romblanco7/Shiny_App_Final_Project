@@ -50,9 +50,20 @@ through the following URLs (1) https://dataverse.harvard.edu/dataset.xhtml?persi
                            #Second tab called LOCATIONS containing the latitudinal and longitudinal locations of 196 countries
                            
                            tabPanel(title= "LOCATIONS", 
-                                    h5("This page helps us determine the latitudinal and longitudinal locations of the 196 countries.
-           These can be used in standardizing the locations of precipitation and wars which we will be looking at"),
-                                    
+                        
+                    h5("Given that the borders of countries change over time
+                    due to territorial expansion and contraction, we won't be
+                    using the using country names to refer to specific
+                    locations in this study. Instead, we will be using
+                    standardized locations in the form of latitudes and
+                    longitudes."),
+                    
+                    h5("We have cleaned our location dataset, leaving only the
+                    columns that contain the names of the countries, their
+                    latitude and their longitude. This page shows the
+                    latitude and longitude of 196 countries. Select a country
+                    using the sidebar panel to see its standardized location."),
+                        
                                     #Sidebar layout
                                     
                                     sidebarLayout(
