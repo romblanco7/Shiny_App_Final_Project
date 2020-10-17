@@ -13,12 +13,16 @@ library(tidyverse)
 library(ggplot2)
 
   
-# Loading raw data
+# Loading raw data for location
 
-Location_data <- read_xlsx("place.pop.precip.war.xlsx", sheet = 3, trim_ws = TRUE)
-Population_data <- read_xlsx("place.pop.precip.war.xlsx", sheet = 4, trim_ws = TRUE)
-Precipitation_data <- read_xlsx("place.pop.precip.war.xlsx", sheet = 5, trim_ws = TRUE)
-War_data <- read_xlsx("place.pop.precip.war.xlsx", sheet = 6, trim_ws = TRUE)
+Location_data <- read_xlsx("Country Locations.xlsx")
+
+# Datasets to be loaded and cleaned
+
+#Population_data <- read_excel("Milestone_4/place.pop.precip.war.xlsx", sheet = c(4))
+#Precipitation_data <- read_excel("Milestone_4/place.pop.precip.war.xlsx", sheet = c(5))
+#War_data <- read_excel("Milestone_4/place.pop.precip.war.xlsx", sheet = c(6))
+  
 
 #Cleaning Location Data
 

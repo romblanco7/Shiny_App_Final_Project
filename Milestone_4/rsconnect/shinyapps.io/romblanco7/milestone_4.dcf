@@ -1,0 +1,13 @@
+name: milestone_4
+title: milestone_4
+username:
+account: romblanco7
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 3036673
+bundleId: 3751451
+url: https://romblanco7.shinyapps.io/Milestone_4/
+when: 1602913730.12734
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: place.pop.precip.war.xlsx
