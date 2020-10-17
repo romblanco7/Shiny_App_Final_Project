@@ -15,19 +15,30 @@ library(tidyverse)
  
 #Coding shiny app 
 
-ui <- fluidPage(navbarPage("Population, Precipitation and War", collapsible = TRUE, inverse = TRUE, theme = shinytheme("cyborg"),
+ui <- fluidPage(navbarPage("Population, Precipitation and Wars", collapsible = TRUE, inverse = TRUE, theme = shinytheme("cyborg"),
          
                                              
 #First tab called ABOUT. This page contains the project description and the source of the data used. 
 
     tabPanel("ABOUT", 
           h3("Project Description"),
+          
           h4("This project analyzes and compares data on the population, precipitation
-and war in 196 countries from 1800 to 2010. The goal is to see whether or not
-there is a strong link between precipitation the population as well as 
-precipitation and world conflicts. The result of this study can influence the way we
-view our environment as a whole and the way we see major environmental issues such as global
-warming."),
+and wars in 196 countries from 1800 to 2010. The goal is to see whether or not
+there is a strong link between precipitation the population as well as
+precipitation and world conflicts. The result of this study can influence the
+way we view our environment as a whole and the way we see major environmental
+issues such as global warming."),
+
+         h4("In order to analyze and compare the three datasets mentioned
+above (Precipitation, Population and Wars), we will need to group all datasets
+by country names and dates. But before we can do that, we have to make the
+names and dates uniformed. After grouping all the datasets by country and
+year, we will then plot those data to see their latitudinal and longitudinal
+locations. Once we have done these, we can use the sidebar panels to set some
+parameters (ie. display datasets by spepific year and/or by country) to see the
+relationship/s between the datasets better"),
+         
           h4("The datasets used in this study come from the Harvard Dataverse and Oregon State Univeristy, linked
 through the following URLs (1) https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/ZN1WLF; (2)https//prism.oregonstate.edu/historical/"),
           h5("Repository: https://github.com/romblanco7/Shiny_App_Final_Project.git")),
@@ -81,5 +92,4 @@ server <- function(input, output) {
 
  }
   
-
 shinyApp(ui = ui, server = server)
