@@ -1,0 +1,31 @@
+---
+title: "raw_data"
+author: "Rom Blanco"
+date: "10/15/2020"
+output: html_document
+---
+
+```{r}
+library(readxl)
+library(dplyr)
+library(janitor)
+library(tidyverse)
+library(ggplot2)
+
+  
+# Loading raw data
+
+Location_data <- read_xlsx("place.pop.precip.war.xlsx", sheet = 3, trim_ws = TRUE)
+Population_data <- read_xlsx("place.pop.precip.war.xlsx", sheet = 4, trim_ws = TRUE)
+Precipitation_data <- read_xlsx("place.pop.precip.war.xlsx", sheet = 5, trim_ws = TRUE)
+War_data <- read_xlsx("place.pop.precip.war.xlsx", sheet = 6, trim_ws = TRUE)
+
+#Cleaning Location Data
+
+Loc_data_clean <- Location_data %>%
+  clean_names() %>%
+  select("primary", "population_data_name", "climate_data_name", "war_data_ccode", "war_data_state_name", "latitude", "longitude") 
+  
+
+```
+
