@@ -1,8 +1,7 @@
 library(shiny)
 library(shinythemes)
-library(readxl)
-library(janitor)
 library(tidyverse)
+library(DT)
 
 # Coding the app. Note that all data used here can be found in the gather.Rmd file
 
@@ -35,7 +34,9 @@ through the following URLs (1) https://dataverse.harvard.edu/dataset.xhtml?persi
                                     h5("Repository: https://github.com/romblanco7/Shiny_App_Final_Project.git")),
                            
                            
-                           #Second tab called LOCATIONS containing the latitudinal and longitudinal locations of 196 countries
+                           #Second tab called LOCATIONS containing the
+                           #latitudinal and longitudinal locations of 196
+                           #countries
                            
                            tabPanel(title= "LOCATIONS", 
                         
@@ -66,15 +67,23 @@ through the following URLs (1) https://dataverse.harvard.edu/dataset.xhtml?persi
                                         mainPanel("Country location",
                                                   plotOutput("plot")))),
                            
-                           #Additional tabs. To be developed.   
+                    #Third tab called War. Allows one to check the location of wars that happened on certain years.
                            
-                           tabPanel(title = "PRECIPITATION", 
+                              tabPanel(title = "WAR", 
+                                    h5("Each date on this page corresponds to a war/wars. On the right hand side is/are the country/ies where those wars took place"),
+                                    
+                                    h5("Moving forward, our goal is to couple these countries with their latitudinal and longitudinal location which can be plotted easily just like what we see on the previous page. Except in this case, each dot will represent a war. We will then plot alongside those war dots the precipitation data and population data. The population and precipitation dots will appear in different sizes depending on the size of the population and precipitation. By plotting these data in this manner, we will be able to see if they tend congregate for each selected year, in which case there is a possible link."),
+                                    
+                                    tableOutput(outputId = "table")),
+                                    
+                
+                    #Additional tabs. To be developed. 
+                    
+                            tabPanel(title = "PRECIPITATION", 
                                     h4("To be developed")),
-                           tabPanel(title = "POPULATION", 
-                                    h4("To be developed")),
-                           tabPanel(title = "WAR", 
-                                    h4("To be developed")),
-                           tabPanel(title = "DISCUSSION", 
+                            tabPanel(title = "POPULATION", 
+                                     h4("To be developed")), 
+                            tabPanel(title = "DISCUSSION", 
                                     h4("To be developed"))
                            
                            
@@ -91,7 +100,7 @@ server <- function(input, output) {
             theme_grey()
     })
     
-    
+    output$table <- renderTable(War_data_clean)
 }
 
 shinyApp(ui = ui, server = server)

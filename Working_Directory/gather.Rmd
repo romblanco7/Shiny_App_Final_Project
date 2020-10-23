@@ -1,7 +1,7 @@
 ---
 title: "raw_data"
 author: "Rom Blanco"
-date: "10/15/2020"
+date: "10/22/2020"
 output: html_document
 ---
 
@@ -11,14 +11,20 @@ library(dplyr)
 library(janitor)
 library(tidyverse)
 library(ggplot2)
+library(hablar)
 
-  
+```
+
+```{r}
 # Loading raw data for location and population
 
 Location_data <- read_xlsx("Raw_Data/Country_locations.xlsx")
-Population_data <-read_xlsx("Raw_Data/Country_populations.xlsx")
+Population_data <- read_xlsx("Raw_Data/Population.xlsx")
+War_data <-read_xlsx("Raw_Data/place.pop.precip.war.xlsx", sheet = c(6))
+# Precipitation_data <-read_xlsx("Raw_Data/place.pop.precip.war.xlsx", sheet = c(5))
+```
 
-
+```{r}
 # Cleaning Location Data. We use the clean_names() to remove the unnecessary
 # spaces in the column names. Then, we select just the columns that we want
 # which are primary, that is the name of the countries, latitude and longitude
@@ -27,10 +33,52 @@ Population_data <-read_xlsx("Raw_Data/Country_populations.xlsx")
 Loc_data_clean <- Location_data %>%
   clean_names() %>%
   select("primary", "latitude", "longitude") 
+```
+
+```{r}
+#  Cleaning war dataset. First, we will select the columns that we need. Then we
+#  will remove all the rows with missing data.
+
+War_data_clean <- War_data %>%
+  select("COUNTRY", "StartDate1Formatted") %>% 
+  drop_na() %>%
   
-# Cleaning the population data. We want to first remove the unnecessary spaces on our column names so we will use clean_names for that.
+# After that, we will create a country called mutate to 1) Fix the name which
+# and 2) arrange the order of the column.
+  
+  mutate(Country = COUNTRY) %>%
+  select(-"COUNTRY") %>%
+  
+# We will then combine the countries with the same identifiers (ie, same date)
+  
+  group_by(StartDate1Formatted) %>%
+  summarise_all(funs(toString(na.omit(.))))
+
+# Finally, we will change the name of the date into "Year" and war code into "War_code
+
+colnames(War_data_clean)[colnames(War_data_clean) == 'StartDate1Formatted'] <- 'Year'
+
+```
 
 
+```{r}
+# # Cleaning the population data. First we want the columns to be all uniformed with no spaces. We will use clean_names(). We will also take out the uneccessary columns using select()
+# 
+# Pop_data_clean <- Population_data %>%
+#   clean_names() %>%
+#   select(-"end_ts") 
+# 
+# Population_data$begin_ts <- as.numeric(format(Population_data$begin_ts,'%Y'))
+#  
+# 
+# 
+# #First, we want to modify the date such that we are only seeing the year. Then, we will remove all the columns that we don't want using the select().
+
+
+
+ 
+
+ 
 
 ```
 
