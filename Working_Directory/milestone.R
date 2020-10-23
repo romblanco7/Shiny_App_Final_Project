@@ -4,19 +4,7 @@ library(readxl)
 library(janitor)
 library(tidyverse)
 
-
-Location_data <- read_xlsx("Country Locations.xlsx")
-
-# Cleaning Location data. From this dataset, we just want columns containing the different names
-# countries are referred to as well as their latitudinal and longitudinal
-# locations.
-
-Loc_data_clean <-  Location_data %>%
-    clean_names() %>%
-    select("primary", "population_data_name", "climate_data_name", "war_data_ccode", "war_data_state_name", "latitude", "longitude") 
-
-
-#Coding shiny app 
+# Coding the app. Note that all data used here can be found in the gather.Rmd file
 
 ui <- fluidPage(navbarPage("Population, Precipitation and Wars", collapsible = TRUE, inverse = TRUE, theme = shinytheme("cyborg"),
                            
@@ -27,11 +15,11 @@ ui <- fluidPage(navbarPage("Population, Precipitation and Wars", collapsible = T
                                     h3("Project Description"),
                                     
                                     h4("This project analyzes and compares data on the population, precipitation
-and wars in 196 countries from 1800 to 2010. The goal is to see whether or not
-there is a strong link between precipitation the population as well as
-precipitation and world conflicts. The result of this study can influence the
+and wars in 196 countries. The overall goal is to see whether or not
+there is a strong link between precipitation and population as well as
+precipitation and wars. The result of this study can influence the
 way we view our environment as a whole and the way we see major environmental
-issues such as global warming."),
+issues such as global warming as contributors to population decline and world conflicts"),
                                     
                                     h4("In order to analyze and compare the three datasets mentioned
 above (Precipitation, Population and Wars), we will need to group all datasets

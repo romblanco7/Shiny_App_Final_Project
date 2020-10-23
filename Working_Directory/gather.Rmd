@@ -1,0 +1,36 @@
+---
+title: "raw_data"
+author: "Rom Blanco"
+date: "10/15/2020"
+output: html_document
+---
+
+```{r}
+library(readxl)
+library(dplyr)
+library(janitor)
+library(tidyverse)
+library(ggplot2)
+
+  
+# Loading raw data for location and population
+
+Location_data <- read_xlsx("Raw_Data/Country_locations.xlsx")
+Population_data <-read_xlsx("Raw_Data/Country_populations.xlsx")
+
+
+# Cleaning Location Data. We use the clean_names() to remove the unnecessary
+# spaces in the column names. Then, we select just the columns that we want
+# which are primary, that is the name of the countries, latitude and longitude
+# of each country.
+
+Loc_data_clean <- Location_data %>%
+  clean_names() %>%
+  select("primary", "latitude", "longitude") 
+  
+# Cleaning the population data. We want to first remove the unnecessary spaces on our column names so we will use clean_names for that.
+
+
+
+```
+
