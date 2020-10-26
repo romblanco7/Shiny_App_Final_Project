@@ -1,7 +1,57 @@
 library(shiny)
 library(shinythemes)
+library(readxl)
+library(dplyr)
+library(janitor)
 library(tidyverse)
+library(ggplot2)
+library(hablar)
 library(DT)
+
+
+#Loading datasets
+Location_data <- read_xlsx("Raw_Data/Country_locations.xlsx")
+Population_data <- read_xlsx("Raw_Data/Population.xlsx")
+War_data <-read_xlsx("Raw_Data/place.pop.precip.war.xlsx", sheet = c(6))
+
+# Cleaning Location Data. We use the clean_names() to remove the unnecessary
+# spaces in the column names. Then, we select just the columns that we want
+# which are primary, that is the name of the countries, latitude and longitude
+# of each country.
+
+Loc_data_clean <- Location_data %>%
+    clean_names() %>%
+    select("primary", "latitude", "longitude") 
+
+
+# Cleaning war dataset. First, we will select the columns that we need. Then we
+# will remove all the rows with missing data.
+
+War_data_clean <- War_data %>%
+    select(COUNTRY, StartYear1) %>% 
+    drop_na() %>%
+    
+# After that, we will create a country called mutate to 1) Fix the name which
+# and 2) arrange the order of the column.
+    
+    mutate(Country = COUNTRY) %>%
+    select(-COUNTRY) %>%
+    
+# We will then combine the countries with the same identifiers (ie, same date)
+    
+    group_by(StartYear1) %>%
+    summarise_all(funs(toString(na.omit(.)))) %>%
+    
+# Next thing we will do is, remove the first 57 columns because those data don't have counterparts in the parts in the Precipitation database
+    
+    slice(-c(1:64))
+
+# Finally, we will change the name of the date into "Year" and war code into "War_code
+
+colnames(War_data_clean)[colnames(War_data_clean) == 'StartYear1'] <- 'Year'
+
+
+
 
 # Coding the app. Note that all data used here can be found in the gather.Rmd file
 
@@ -11,6 +61,7 @@ ui <- fluidPage(navbarPage("Population, Precipitation and Wars", collapsible = T
                            #First tab called ABOUT. This page contains the project description and the source of the data used. 
                            
                            tabPanel("ABOUT", 
+                                    
                                     h3("Project Description"),
                                     
                                     h4("This project analyzes and compares data on the population, precipitation
@@ -33,6 +84,8 @@ relationship/s between the datasets better"),
 through the following URLs (1) https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/ZN1WLF; (2)https//prism.oregonstate.edu/historical/"),
                                     h5("Repository: https://github.com/romblanco7/Shiny_App_Final_Project.git")),
                            
+                                    
+                                   
                            
                            #Second tab called LOCATIONS containing the
                            #latitudinal and longitudinal locations of 196
@@ -98,6 +151,10 @@ server <- function(input, output) {
         ggplot(data = Loc_data_clean[Loc_data_clean$primary == input$Countries,], mapping = aes(x = latitude, y = longitude)) +
             geom_point(color="blue", size = 5) +
             theme_grey()
+    })
+    
+    output$Proj_desc <- renderText({ 
+        "You have selected this"
     })
     
     output$table <- renderTable(War_data_clean)

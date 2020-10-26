@@ -12,6 +12,7 @@ library(janitor)
 library(tidyverse)
 library(ggplot2)
 library(hablar)
+library(reprex)
 
 ```
 
@@ -40,39 +41,48 @@ Loc_data_clean <- Location_data %>%
 #  will remove all the rows with missing data.
 
 War_data_clean <- War_data %>%
-  select("COUNTRY", "StartDate1Formatted") %>% 
+  select(COUNTRY, StartYear1) %>% 
   drop_na() %>%
   
 # After that, we will create a country called mutate to 1) Fix the name which
 # and 2) arrange the order of the column.
   
   mutate(Country = COUNTRY) %>%
-  select(-"COUNTRY") %>%
+  select(-COUNTRY) %>%
   
 # We will then combine the countries with the same identifiers (ie, same date)
   
-  group_by(StartDate1Formatted) %>%
-  summarise_all(funs(toString(na.omit(.))))
+  group_by(StartYear1) %>%
+  summarise_all(funs(toString(na.omit(.)))) %>%
+
+# Next thing we will do is, remove the first 57 columns because those data don't have counterparts in the parts in the Precipitation database
+  
+  slice(-c(1:64))
 
 # Finally, we will change the name of the date into "Year" and war code into "War_code
 
-colnames(War_data_clean)[colnames(War_data_clean) == 'StartDate1Formatted'] <- 'Year'
-
+colnames(War_data_clean)[colnames(War_data_clean) == 'StartYear1'] <- 'Year'
 ```
 
 
 ```{r}
-# # Cleaning the population data. First we want the columns to be all uniformed with no spaces. We will use clean_names(). We will also take out the uneccessary columns using select()
-# 
-# Pop_data_clean <- Population_data %>%
-#   clean_names() %>%
-#   select(-"end_ts") 
-# 
-# Population_data$begin_ts <- as.numeric(format(Population_data$begin_ts,'%Y'))
-#  
-# 
-# 
-# #First, we want to modify the date such that we are only seeing the year. Then, we will remove all the columns that we don't want using the select().
+# Cleaning the population data. First we want the columns to be all uniformed with no spaces. We will use clean_names(). We will also take out the uneccessary columns using select()
+
+
+Pop_data_clean <- Population_data %>%
+  select(-end_ts) %>%
+  mutate_at(vars(matches("years")), 
+            str_replace(pattern = " " , replacement = "")) %>%
+  mutate_at(vars(matches("years")), as.numeric)
+    
+  
+
+Population_data$begin_ts <- as.numeric(format(Population_data$begin_ts,'%Y')) %>%
+  mutate_at(vars(matches("years")), as.numeric)
+
+
+
+#First, we want to modify the date such that we are only seeing the year. Then, we will remove all the columns that we don't want using the select().
 
 
 
