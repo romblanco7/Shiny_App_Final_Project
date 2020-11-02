@@ -6,51 +6,78 @@ library(janitor)
 library(tidyverse)
 library(ggplot2)
 library(hablar)
-library(DT)
+
+merged <- read_rds("merged.rds")
 
 
-#Loading datasets
+# LOADING DATASETS
+
 Location_data <- read_xlsx("Raw_Data/Country_locations.xlsx")
-Population_data <- read_xlsx("Raw_Data/Population.xlsx")
+Population_data <- read_xls("Raw_Data/Population_2.xls")
 War_data <-read_xlsx("Raw_Data/place.pop.precip.war.xlsx", sheet = c(6))
+Precip_data <- read_excel("Raw_Data/world_precipitation.xls")
 
-# Cleaning Location Data. We use the clean_names() to remove the unnecessary
+
+# Cleaning Location Data. 
+# We use the clean_names() to remove the unnecessary
 # spaces in the column names. Then, we select just the columns that we want
-# which are primary, that is the name of the countries, latitude and longitude
-# of each country.
+# which are primary, that is the name of the countries, latitude and longitude of each country.
 
 Loc_data_clean <- Location_data %>%
     clean_names() %>%
-    select("primary", "latitude", "longitude") 
+    select("primary", "latitude", "longitude") %>%
+rename(Country = primary, Latitude = latitude, Longitude = longitude)
 
 
-# Cleaning war dataset. First, we will select the columns that we need. Then we
-# will remove all the rows with missing data.
+# Cleaning war dataset. 
+# First, we will select the columns that we need. Then we
+#  will remove all the rows with missing data.
 
 War_data_clean <- War_data %>%
     select(COUNTRY, StartYear1) %>% 
     drop_na() %>%
     
-# After that, we will create a country called mutate to 1) Fix the name which
-# and 2) arrange the order of the column.
     
-    mutate(Country = COUNTRY) %>%
+    slice(-c(1:204))%>% # Next thing we will do is, remove the first 204 columns because those data don't have counterparts in the parts in the Precipitation database
+    
+    mutate(Country = COUNTRY) %>% # After that, we will create a country called mutate to 1) Fix the name which
+    # and 2) arrange the order of the column.
     select(-COUNTRY) %>%
     
-# We will then combine the countries with the same identifiers (ie, same date)
     
-    group_by(StartYear1) %>%
-    summarise_all(funs(toString(na.omit(.)))) %>%
-    
-# Next thing we will do is, remove the first 57 columns because those data don't have counterparts in the parts in the Precipitation database
-    
-    slice(-c(1:64))
+    # We will change the name of the date into "Year" and war code into "War_code
+    group_by(Country) %>%
+    summarise_all(funs(toString(na.omit(.)))) 
 
-# Finally, we will change the name of the date into "Year" and war code into "War_code
-
+# We will then combine the countries with the same identifiers (ie, same country name)
 colnames(War_data_clean)[colnames(War_data_clean) == 'StartYear1'] <- 'Year'
 
+# Cleaning the population data. 
+# First we want to remove the years we don't need, given the precipitation only covers as far back as 1963. Then, we will transpose the columns to rows and vice- versa. 
 
+Population_data_2 <- Population_data %>%
+    select(-c("1960", "1961", "1962")) 
+
+Pop_data_clean <- t(Population_data_2) 
+
+# We want to change the firt column's name to Year
+colnames(Pop_data_clean)[colnames(Pop_data_clean) == 'Country Name'] <- 'Year'
+
+
+# Cleaning Precipitation dataset
+
+
+precip_data_clean <- Precip_data %>%
+    rename(Country = Year)
+
+# MERGING DATASETS
+
+# Merging War, Location and Population and Data
+
+merged <- precip_data_clean %>%
+    left_join(War_data_clean, by = "Country", suffix = c("precip.War_data_clean", "_")) %>%
+    left_join(Loc_data_clean, by = "Country") %>%
+    rename(War_Year = Year)
 
 
 # Coding the app. Note that all data used here can be found in the gather.Rmd file
@@ -58,38 +85,15 @@ colnames(War_data_clean)[colnames(War_data_clean) == 'StartYear1'] <- 'Year'
 ui <- fluidPage(navbarPage("Population, Precipitation and Wars", collapsible = TRUE, inverse = TRUE, theme = shinytheme("cyborg"),
                            
                            
-                           #First tab called ABOUT. This page contains the project description and the source of the data used. 
+#First tab called ABOUT. This page contains the project description and the
+#source of the data used.
                            
                            tabPanel("ABOUT", 
                                     
-                                    h3("Project Description"),
+                                    source('about_text.R')),
                                     
-                                    h4("This project analyzes and compares data on the population, precipitation
-and wars in 196 countries. The overall goal is to see whether or not
-there is a strong link between precipitation and population as well as
-precipitation and wars. The result of this study can influence the
-way we view our environment as a whole and the way we see major environmental
-issues such as global warming as contributors to population decline and world conflicts"),
-                                    
-                                    h4("In order to analyze and compare the three datasets mentioned
-above (Precipitation, Population and Wars), we will need to group all datasets
-by country names and dates. But before we can do that, we have to make the
-names and dates uniformed. After grouping all the datasets by country and
-year, we will then plot those data to see their latitudinal and longitudinal
-locations. Once we have done these, we can use the sidebar panels to set some
-parameters (ie. display datasets by spepific year and/or by country) to see the
-relationship/s between the datasets better"),
-                                    
-                                    h4("The datasets used in this study come from the Harvard Dataverse and Oregon State Univeristy, linked
-through the following URLs (1) https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/ZN1WLF; (2)https//prism.oregonstate.edu/historical/"),
-                                    h5("Repository: https://github.com/romblanco7/Shiny_App_Final_Project.git")),
-                           
-                                    
-                                   
-                           
-                           #Second tab called LOCATIONS containing the
-                           #latitudinal and longitudinal locations of 196
-                           #countries
+#Second tab called LOCATIONS containing the latitudinal and longitudinal
+#locations of 196 countries
                            
                            tabPanel(title= "LOCATIONS", 
                         
@@ -113,7 +117,7 @@ through the following URLs (1) https://dataverse.harvard.edu/dataset.xhtml?persi
                                         #Sidebar Panel to select a country    
                                         
                                         sidebarPanel(
-                                            selectInput("Countries", "Select country:", choices = Loc_data_clean$primary)),
+                                            selectInput("Countries", "Select country:", choices = Loc_data_clean$Country)),
                                         
                                         #Main Panel that plot the location of the country selected  
                                         
@@ -123,17 +127,27 @@ through the following URLs (1) https://dataverse.harvard.edu/dataset.xhtml?persi
                     #Third tab called War. Allows one to check the location of wars that happened on certain years.
                            
                               tabPanel(title = "WAR", 
-                                    h5("Each date on this page corresponds to a war/wars. On the right hand side is/are the country/ies where those wars took place"),
-                                    
-                                    h5("Moving forward, our goal is to couple these countries with their latitudinal and longitudinal location which can be plotted easily just like what we see on the previous page. Except in this case, each dot will represent a war. We will then plot alongside those war dots the precipitation data and population data. The population and precipitation dots will appear in different sizes depending on the size of the population and precipitation. By plotting these data in this manner, we will be able to see if they tend congregate for each selected year, in which case there is a possible link."),
-                                    
-                                    tableOutput(outputId = "table")),
+                                   h5("Each country on this page corresponds to a war/wars. The column on the left tells us when those wars took place"),
+                                  
+                                    #Sidebar layout
+                                   
+                                   sidebarLayout(
+                                       
+                                       #Sidebar Panel to select a country    
+                                       
+                                       sidebarPanel(
+                                           selectInput("Countries2", "Select a country:", choices = merged$Country)),
+                                       
+                                       #Main Panel that plot the location of the country selected  
+                                       
+                                       mainPanel("Wars",
+                                                  textOutput("War_Years"),
+                                                  plotOutput("Precip_linegraph")))),
                                     
                 
                     #Additional tabs. To be developed. 
                     
-                            tabPanel(title = "PRECIPITATION", 
-                                    h4("To be developed")),
+                            tabPanel(title = "PRECIPITATION"),
                             tabPanel(title = "POPULATION", 
                                      h4("To be developed")), 
                             tabPanel(title = "DISCUSSION", 
@@ -148,16 +162,22 @@ server <- function(input, output) {
     # Plot showing  the latitudinal and longitudinal location of 196 countries
     
     output$plot <- renderPlot({
-        ggplot(data = Loc_data_clean[Loc_data_clean$primary == input$Countries,], mapping = aes(x = latitude, y = longitude)) +
+        ggplot(data = Loc_data_clean[Loc_data_clean$Country == input$Countries,], 
+               mapping = aes(x = Latitude, y = Longitude)) +
             geom_point(color="blue", size = 5) +
             theme_grey()
     })
-    
-    output$Proj_desc <- renderText({ 
-        "You have selected this"
+
+    output$War_Years <- renderText({
+        merged$War_Year[merged$Country == input$Countries2]
     })
     
-    output$table <- renderTable(War_data_clean)
+    output$Precip_linegraph <- renderPlot({
+        ggplot(data = merged[merged$Country == input$Countries2,]), 
+               mapping
+        
+    })
+        
 }
 
 shinyApp(ui = ui, server = server)

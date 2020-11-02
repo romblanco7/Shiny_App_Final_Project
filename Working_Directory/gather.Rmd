@@ -16,27 +16,37 @@ library(reprex)
 
 ```
 
+DATASETS
+
 ```{r}
 # Loading raw data for location and population
 
 Location_data <- read_xlsx("Raw_Data/Country_locations.xlsx")
-Population_data <- read_xlsx("Raw_Data/Population.xlsx")
+Population_data <- read_xls("Raw_Data/Population_2.xls")
 War_data <-read_xlsx("Raw_Data/place.pop.precip.war.xlsx", sheet = c(6))
-# Precipitation_data <-read_xlsx("Raw_Data/place.pop.precip.war.xlsx", sheet = c(5))
+Precip_data <- read_excel("Raw_Data/world_precipitation.xls")
+                             
 ```
 
+
+LOCATION DATA
+
 ```{r}
+
 # Cleaning Location Data. We use the clean_names() to remove the unnecessary
 # spaces in the column names. Then, we select just the columns that we want
-# which are primary, that is the name of the countries, latitude and longitude
-# of each country.
+# which are primary, that is the name of the countries, latitude and longitude of each country.
 
 Loc_data_clean <- Location_data %>%
   clean_names() %>%
-  select("primary", "latitude", "longitude") 
+  select("primary", "latitude", "longitude") %>%
+rename(Country = primary, Latitude = latitude, Longitude = longitude)
 ```
 
+WAR DATA
+
 ```{r}
+
 #  Cleaning war dataset. First, we will select the columns that we need. Then we
 #  will remove all the rows with missing data.
 
@@ -44,51 +54,84 @@ War_data_clean <- War_data %>%
   select(COUNTRY, StartYear1) %>% 
   drop_na() %>%
   
-# After that, we will create a country called mutate to 1) Fix the name which
-# and 2) arrange the order of the column.
   
-  mutate(Country = COUNTRY) %>%
+  slice(-c(1:204))%>% # Next thing we will do is, remove the first 204 columns because those data don't have counterparts in the parts in the Precipitation database
+
+  mutate(Country = COUNTRY) %>% # After that, we will create a country called mutate to 1) Fix the name which
+# and 2) arrange the order of the column.
   select(-COUNTRY) %>%
   
-# We will then combine the countries with the same identifiers (ie, same date)
-  
-  group_by(StartYear1) %>%
-  summarise_all(funs(toString(na.omit(.)))) %>%
 
-# Next thing we will do is, remove the first 57 columns because those data don't have counterparts in the parts in the Precipitation database
-  
-  slice(-c(1:64))
-
-# Finally, we will change the name of the date into "Year" and war code into "War_code
-
+# We will change the name of the date into "Year" and war code into "War_code
+group_by(Country) %>%
+summarise_all(funs(toString(na.omit(.)))) 
+ 
+# We will then combine the countries with the same identifiers (ie, same country name)
 colnames(War_data_clean)[colnames(War_data_clean) == 'StartYear1'] <- 'Year'
+
+# 
+# 
+  
+   
+
+
 ```
 
+POPULATION DATA
 
 ```{r}
-# Cleaning the population data. First we want the columns to be all uniformed with no spaces. We will use clean_names(). We will also take out the uneccessary columns using select()
+# Cleaning the population data. First we want to remove the years we don't need, given the precipitation only covers as far back as 1963. Then, we will transpose the columns to rows and vice- versa. 
 
+Population_data_2 <- Population_data %>%
+select(-c("1960", "1961", "1962")) 
 
-Pop_data_clean <- Population_data %>%
-  select(-end_ts) %>%
-  mutate_at(vars(matches("years")), 
-            str_replace(pattern = " " , replacement = "")) %>%
-  mutate_at(vars(matches("years")), as.numeric)
-    
+Pop_data_clean <- t(Population_data_2) 
+
+# We want to change the firt column's name to Year
+colnames(Pop_data_clean)[colnames(Pop_data_clean) == 'Country Name'] <- 'Year'
+
+ 
+```
+
+PRECIP DATASET 1
+
+```{r}
+precip_data_clean <- Precip_data %>%
+  rename(Country = Year)
+```
+
+MERGING DATASETS
+
+```{r}
+# Merging War, Location and Population and Data
+
+merged <- precip_data_clean %>%
+  left_join(War_data_clean, by = "Country", suffix = c("precip.War_data_clean", "_")) %>%
+  left_join(Loc_data_clean, by = "Country") %>%
+  rename(War_Year = Year) %>%
+  mutate(Country = as.factor(Country))
   
 
-Population_data$begin_ts <- as.numeric(format(Population_data$begin_ts,'%Y')) %>%
-  mutate_at(vars(matches("years")), as.numeric)
-
-
-
-#First, we want to modify the date such that we are only seeing the year. Then, we will remove all the columns that we don't want using the select().
-
-
-
- 
-
- 
+write_rds(merged, "merged.rds")
 
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
