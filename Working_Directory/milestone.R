@@ -7,82 +7,9 @@ library(tidyverse)
 library(ggplot2)
 library(hablar)
 
-merged <- read_rds("merged.rds")
-
-
-# LOADING DATASETS
-
-Location_data <- read_xlsx("Raw_Data/Country_locations.xlsx")
-Population_data <- read_xls("Raw_Data/Population_2.xls")
-War_data <-read_xlsx("Raw_Data/place.pop.precip.war.xlsx", sheet = c(6))
-Precip_data <- read_excel("Raw_Data/world_precipitation.xls")
-
-
-# Cleaning Location Data. 
-# We use the clean_names() to remove the unnecessary
-# spaces in the column names. Then, we select just the columns that we want
-# which are primary, that is the name of the countries, latitude and longitude of each country.
-
-Loc_data_clean <- Location_data %>%
-    clean_names() %>%
-    select("primary", "latitude", "longitude") %>%
-rename(Country = primary, Latitude = latitude, Longitude = longitude)
-
-
-# Cleaning war dataset. 
-# First, we will select the columns that we need. Then we
-#  will remove all the rows with missing data.
-
-War_data_clean <- War_data %>%
-    select(COUNTRY, StartYear1) %>% 
-    drop_na() %>%
-    
-    
-    slice(-c(1:204))%>% # Next thing we will do is, remove the first 204 columns because those data don't have counterparts in the parts in the Precipitation database
-    
-    mutate(Country = COUNTRY) %>% # After that, we will create a country called mutate to 1) Fix the name which
-    # and 2) arrange the order of the column.
-    select(-COUNTRY) %>%
-    
-    
-    # We will change the name of the date into "Year" and war code into "War_code
-    group_by(Country) %>%
-    summarise_all(funs(toString(na.omit(.)))) 
-
-# We will then combine the countries with the same identifiers (ie, same country name)
-colnames(War_data_clean)[colnames(War_data_clean) == 'StartYear1'] <- 'Year'
-
-# Cleaning the population data. 
-# First we want to remove the years we don't need, given the precipitation only covers as far back as 1963. Then, we will transpose the columns to rows and vice- versa. 
-
-Population_data_2 <- Population_data %>%
-    select(-c("1960", "1961", "1962")) 
-
-Pop_data_clean <- t(Population_data_2) 
-
-# We want to change the firt column's name to Year
-colnames(Pop_data_clean)[colnames(Pop_data_clean) == 'Country Name'] <- 'Year'
-
-
-# Cleaning Precipitation dataset
-
-
-precip_data_clean <- Precip_data %>%
-    rename(Country = Year)
-
-# MERGING DATASETS
-
-# Merging War, Location and Population and Data
-
-merged <- precip_data_clean %>%
-    left_join(War_data_clean, by = "Country", suffix = c("precip.War_data_clean", "_")) %>%
-    left_join(Loc_data_clean, by = "Country") %>%
-    rename(War_Year = Year)
-
-
 # Coding the app. Note that all data used here can be found in the gather.Rmd file
 
-ui <- fluidPage(navbarPage("Population, Precipitation and Wars", collapsible = TRUE, inverse = TRUE, theme = shinytheme("cyborg"),
+ui <- fluidPage(navbarPage("FORESTED AREAS", collapsible = TRUE, inverse = TRUE, theme = shinytheme("cyborg"),
                            
                            
 #First tab called ABOUT. This page contains the project description and the
@@ -90,45 +17,31 @@ ui <- fluidPage(navbarPage("Population, Precipitation and Wars", collapsible = T
                            
                            tabPanel("ABOUT", 
                                     
-                                    source('about_text.R')),
+h3("Project Description"),
                                     
-#Second tab called LOCATIONS containing the latitudinal and longitudinal
-#locations of 196 countries
-                           
-                           tabPanel(title= "LOCATIONS", 
-                        
-                    h5("Given that the borders of countries change over time
-                    due to territorial expansion and contraction, we won't be
-                    using the using country names to refer to specific
-                    locations in this study. Instead, we will be using
-                    standardized locations in the form of latitudes and
-                    longitudes."),
-                    
-                    h5("We have cleaned our location dataset, leaving only the
-                    columns that contain the names of the countries, their
-                    latitude and their longitude. This page shows the
-                    latitude and longitude of 196 countries. Select a country
-                    using the sidebar panel to see its standardized location."),
-                        
-                                    #Sidebar layout
+h5("This project looks at data on forested areas, unemployment and
+crime rates and communicable disease rates in more than 100 countries over
+three decades 1990-2020"),
+
+h5("The choice of countries and time period are determined by the availability of
+data for the variables mentioned above. The overall goal is challenge existing 
+claims regarding relationship between forested areas and each of the three other variables. 
+The result of the study can influence the way we view our environment in general, 
+and environmental protection and restoration in particular."),
+
+
+h5("The datasets used in this study come from the Harvard Dataverse and Oregon
+State Univeristy, linked through the following URLs (1)
+https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/ZN1WLF;
+(2)https//prism.oregonstate.edu/historical/ (3)
+https://ourworldindata.org/natural-disasters"),
+
+h5("My repository is found on this page: https://github.com/romblanco7/Shiny_App_Final_Project.git")),
                                     
-                                    sidebarLayout(
-                                        
-                                        #Sidebar Panel to select a country    
-                                        
-                                        sidebarPanel(
-                                            selectInput("Countries", "Select country:", choices = Loc_data_clean$Country)),
-                                        
-                                        #Main Panel that plot the location of the country selected  
-                                        
-                                        mainPanel("Country location",
-                                                  plotOutput("plot")))),
-                           
-                    #Third tab called War. Allows one to check the location of wars that happened on certain years.
-                           
-                              tabPanel(title = "WAR", 
-                                   h5("Each country on this page corresponds to a war/wars. The column on the left tells us when those wars took place"),
-                                  
+# Tab 1 called Models. Contains plots.                                
+                             
+                              tabPanel(title = "Models", 
+                                   
                                     #Sidebar layout
                                    
                                    sidebarLayout(
@@ -136,48 +49,73 @@ ui <- fluidPage(navbarPage("Population, Precipitation and Wars", collapsible = T
                                        #Sidebar Panel to select a country    
                                        
                                        sidebarPanel(
-                                           selectInput("Countries2", "Select a country:", choices = merged$Country)),
+                                           selectInput("Countries_1", "Select country:", choices = For_v_Unemp$Country),
+                                           selectInput("Countries_2", "Select country:", choices = For_v_Unemp$Country),
+                                           selectInput("Countries_3", "Select country:", choices = For_v_Crime$Country)),
                                        
                                        #Main Panel that plot the location of the country selected  
                                        
-                                       mainPanel("Wars",
-                                                  textOutput("War_Years"),
-                                                  plotOutput("Precip_linegraph")))),
-                                    
-                
-                    #Additional tabs. To be developed. 
-                    
-                            tabPanel(title = "PRECIPITATION"),
-                            tabPanel(title = "POPULATION", 
-                                     h4("To be developed")), 
-                            tabPanel(title = "DISCUSSION", 
-                                    h4("To be developed"))
-                           
-                           
+                                       mainPanel("Plots",
+                                                 
+                                                 plotOutput("plot_1"),
+                                                 plotOutput("plot_2"),
+                                                 plotOutput("plot_3"),
+                                                 plotOutput("plot_4")))),
+                       
+                              tabPanel(title = "Discussion")
 ))
-
-
+                                                 
+                                    
 server <- function(input, output) {
     
-    # Plot showing  the latitudinal and longitudinal location of 196 countries
+    output$plot_1 <- renderPlot ({
+            ggplot(data = For_v_Unemp[For_v_Unemp$Country == input$Countries_1,], 
+                   mapping = aes(x = forested_area, y = Unemployed)) +
+            geom_point(color = "green") + 
+            geom_smooth(method = lm, color = "red") +
+            theme_bw() +
+             labs(title = "Forested Area vs Number of People Unemployed",
+                  subtitle = "Number of people unemployed decreases as forested area increases",
+                  x = "Forested Area (sq. km)",
+                  y = "Disease rate")
+        })
     
-    output$plot <- renderPlot({
-        ggplot(data = Loc_data_clean[Loc_data_clean$Country == input$Countries,], 
-               mapping = aes(x = Latitude, y = Longitude)) +
-            geom_point(color="blue", size = 5) +
-            theme_grey()
-    })
-
-    output$War_Years <- renderText({
-        merged$War_Year[merged$Country == input$Countries2]
+    
+    output$plot_2 <- renderPlot ({
+            ggplot(data = For_v_Crime[For_v_Crime$Country == input$Countries_2,], 
+                   mapping = aes(x = forested_area, y = crime_rate)) +
+            geom_point(color = "green") + 
+            geom_smooth(method = lm, color = "red") +
+            theme_bw() +
+            labs(title = "Forested Area vs Crime Rates", 
+                 subtitle = "Crime rate decreases as forested area increases",
+                 x = "Forested Area (sq. km)",
+                 y = "Crime rate")
+    }) 
+    
+    output$plot_3 <- renderPlot ({
+            ggplot(data = For_v_Dis[For_v_Dis$Country == input$Countries_3,], 
+                   mapping = aes(x = forested_area, y = disease_rate)) +
+            geom_point(color = "green") + 
+            geom_smooth(method = lm, color = "red") +
+            theme_bw() +
+            labs(title = "Forested Area vs Communicable Disease Rate",
+                 subtitle = "Disease rate decreases as forested area increases",
+                 x = "Forested Area (sq. km)",
+                 y = "Disease rate")
     })
     
-    output$Precip_linegraph <- renderPlot({
-        ggplot(data = merged[merged$Country == input$Countries2,]), 
-               mapping
-        
+    output$plot_4 <- renderPlot ({
+        ggplot(data = Forest_v_disasters,
+                   mapping = aes(x = World, y = Disaster_count)) +
+        geom_point(color = "green") + 
+            geom_smooth(method = lm, color = "red") +
+        theme_bw() +
+        labs(title = "Forested Area vs Disaster Count Globally",
+             subtitle = "Disaster count decreases as forested area increases",
+             x = "Forested Area (sq. km)",
+             y = "Number of Natural Disasters")
     })
-        
 }
 
 shinyApp(ui = ui, server = server)

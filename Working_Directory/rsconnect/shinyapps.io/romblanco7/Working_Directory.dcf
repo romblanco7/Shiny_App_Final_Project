@@ -1,0 +1,13 @@
+name: Working_Directory
+title:
+username:
+account: romblanco7
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 3081668
+bundleId: 3819611
+url: https://romblanco7.shinyapps.io/Working_Directory/
+when: 1604499164.08617
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: merged.rds

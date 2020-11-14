@@ -13,125 +13,155 @@ library(tidyverse)
 library(ggplot2)
 library(hablar)
 library(reprex)
+library(lubridate)
 
 ```
 
-DATASETS
 
 ```{r}
-# Loading raw data for location and population
-
-Location_data <- read_xlsx("Raw_Data/Country_locations.xlsx")
-Population_data <- read_xls("Raw_Data/Population_2.xls")
-War_data <-read_xlsx("Raw_Data/place.pop.precip.war.xlsx", sheet = c(6))
-Precip_data <- read_excel("Raw_Data/world_precipitation.xls")
-                             
+crime_rate <- read.csv("Raw_Data/crimes.csv")
+disease_rate <- read.csv("Raw_Data/Communicable_disease_rates.csv")
+forested_area <- read.csv("Raw_Data/forest-area-km.csv")
+natural_disasters <- read.csv("Raw_Data/Natural_disasters.csv")
+unemployment_rate <- read_xls("Raw_Data/Labor_force.xls")
 ```
 
 
-LOCATION DATA
+NATURAL DISASTERS
 
 ```{r}
+# Cleaning natural_disasters data
 
-# Cleaning Location Data. We use the clean_names() to remove the unnecessary
-# spaces in the column names. Then, we select just the columns that we want
-# which are primary, that is the name of the countries, latitude and longitude of each country.
-
-Loc_data_clean <- Location_data %>%
-  clean_names() %>%
-  select("primary", "latitude", "longitude") %>%
-rename(Country = primary, Latitude = latitude, Longitude = longitude)
+disasters <- natural_disasters %>%
+  select(-Entity) %>%
+  rename(Disaster_count = Number.of.disasters..EMDAT..2020..) %>%
+  mutate(Year = as.numeric(Year)) %>%
+  mutate(Disaster_count = as.numeric(Disaster_count))
 ```
 
-WAR DATA
+
+FORESTED AREA AND UNEMPLOYMENT
 
 ```{r}
+# Cleaning forested_area dataset
+forested <- forested_area %>%
+  select(-Code) %>%
+  rename(forested_area = Forest.area) %>%
+  rename(Country = Entity) 
 
-#  Cleaning war dataset. First, we will select the columns that we need. Then we
-#  will remove all the rows with missing data.
+# Cleaning unemployment dataset
+unemployment <- unemployment_rate %>%
+  rename(Country = `Country Name`) %>%
+  pivot_longer(cols = c(`1990`:`2020`), names_to = "Year", values_to = "Unemployed") %>%
+  mutate(Year = as.integer(Year))
 
-War_data_clean <- War_data %>%
-  select(COUNTRY, StartYear1) %>% 
-  drop_na() %>%
+# merging forested_area and unemployment
+For_v_Unemp <- forested %>%
+ left_join(unemployment, by = c("Country", "Year")) %>%
+  drop_na(Unemployed)
   
-  
-  slice(-c(1:204))%>% # Next thing we will do is, remove the first 204 columns because those data don't have counterparts in the parts in the Precipitation database
+# plotting forested_area and unemployment
+For_v_Unemp_Plot <- For_v_Unemp  %>%
+  filter(Country == "Angola") %>%
+  ggplot(aes(x = forested_area, y = Unemployed)) +
+  geom_point() + 
+  geom_smooth(method = lm) +
+  theme_bw() +
+  labs(title = "Forested Area vs Number of People Unemployed",
+       subtitle = "Number of people unemployed decreases as forested area increases",
+       x = "Forested Area (sq. km)",
+       y = "Disease rate")
 
-  mutate(Country = COUNTRY) %>% # After that, we will create a country called mutate to 1) Fix the name which
-# and 2) arrange the order of the column.
-  select(-COUNTRY) %>%
-  
+For_v_Unemp_Plot
 
-# We will change the name of the date into "Year" and war code into "War_code
-group_by(Country) %>%
-summarise_all(funs(toString(na.omit(.)))) 
- 
-# We will then combine the countries with the same identifiers (ie, same country name)
-colnames(War_data_clean)[colnames(War_data_clean) == 'StartYear1'] <- 'Year'
 
-# 
-# 
-  
-   
-
+# creating linear model
+lmUnemp = lm(Unemployed~forested_area, data = For_v_Unemp)
+summary(lmUnemp)
 
 ```
 
-POPULATION DATA
+
+FORESTED AREA AND DISEASE RATE
 
 ```{r}
-# Cleaning the population data. First we want to remove the years we don't need, given the precipitation only covers as far back as 1963. Then, we will transpose the columns to rows and vice- versa. 
+# cleaning disease_rate dataset
+disease <- disease_rate %>%
+  rename(disease_rate = DALYs..Disability.Adjusted.Life.Years....Communicable..maternal..neonatal..and.nutritional.diseases) %>%
+  rename(Country = Entity) 
 
-Population_data_2 <- Population_data %>%
-select(-c("1960", "1961", "1962")) 
+# merging forested_area and unemployment
+For_v_Dis <- forested %>%
+ left_join(disease, by = c("Country", "Year")) %>%
+  drop_na(disease_rate)
 
-Pop_data_clean <- t(Population_data_2) 
+For_v_Dis_Plot <- For_v_Dis %>%
+  filter(Country == "Angola") %>%
+  ggplot(aes(x = forested_area, y = disease_rate)) +
+  geom_point() + 
+  geom_smooth(method = "lm") +
+  theme_bw() +
+  labs(title = "Forested Area vs Communicable Disease Rate",
+       subtitle = "Disease rate decreases as forested area increases",
+       x = "Forested Area (sq. km)",
+       y = "Disease rate")
 
-# We want to change the firt column's name to Year
-colnames(Pop_data_clean)[colnames(Pop_data_clean) == 'Country Name'] <- 'Year'
-
- 
+For_v_Dis_Plot
 ```
 
-PRECIP DATASET 1
+FORESTED AREA AND CRIMES
 
 ```{r}
-precip_data_clean <- Precip_data %>%
-  rename(Country = Year)
-```
+# cleaning crime_rate dataset
+crime <- crime_rate %>%
+  rename(Country = Entity, crime_rate = Deaths...Interpersonal.violence...Sex..Both...Age..All.Ages..Percent.) 
 
-MERGING DATASETS
+# merging forested_area and unemployment
+For_v_Crime <- forested %>%
+ left_join(crime, by = c("Country", "Year")) %>%
+  drop_na(crime_rate)
 
-```{r}
-# Merging War, Location and Population and Data
-
-merged <- precip_data_clean %>%
-  left_join(War_data_clean, by = "Country", suffix = c("precip.War_data_clean", "_")) %>%
-  left_join(Loc_data_clean, by = "Country") %>%
-  rename(War_Year = Year) %>%
-  mutate(Country = as.factor(Country))
+For_v_crime_Plot <- For_v_Crime %>%
+  filter(Country == "Angola") %>%
+  ggplot(aes(x = forested_area, y = crime_rate)) +
+  geom_point() + 
+  geom_smooth(method = "lm") +
+  theme_bw() +
+  labs(title = "Forested Area vs Crime Rates", 
+       subtitle = "Crime rate decreases as forested area increases",
+       x = "Forested Area (sq. km)",
+       y = "Crime rate")
   
+For_v_crime_Plot
+  
+```
 
-write_rds(merged, "merged.rds")
+NORESTED AREA AND NATURAL DISASTERS
+```{r}
+# Cleaning Natural Disasters and merging it with Forested Area 
+Forest_v_disasters <- forested %>%
+  pivot_wider(names_from = "Country", values_from = "forested_area") %>%
+  select(Year, World) %>%
+  left_join(disasters, by = "Year") %>%
+  select(World, Year, Disaster_count) 
+
+# Merging Natural Disasters and Forested Area 
+disasters_v_forest <- Forest_v_disasters %>% 
+  ggplot(aes(x = World, y = Disaster_count)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  theme_bw() +
+  labs(title = "Forested Area vs Disaster Count Globally", 
+       subtitle = "Disaster count decreases as forested area increases",
+       x = "Forested Area (sq. km)",
+       y = "Number of Natural Disasters")
+  
+disasters_v_forest
 
 ```
 
 
+```{r}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+```
 
