@@ -6,162 +6,329 @@ output: html_document
 ---
 
 ```{r}
-library(readxl)
 library(dplyr)
-library(janitor)
+library(readxl)
 library(tidyverse)
 library(ggplot2)
-library(hablar)
-library(reprex)
-library(lubridate)
+library(rstanarm)
+library(infer)
+```
+
+LOADING DATASETS
+```{r}
+forested_area_raw <- read.csv("Raw_Data/forest-area-km.csv")
+urban_population_raw <- read_excel("Raw_Data/Urban_population.xls") 
 
 ```
 
 
+CLEANING DATASETS
 ```{r}
-crime_rate <- read.csv("Raw_Data/crimes.csv")
-disease_rate <- read.csv("Raw_Data/Communicable_disease_rates.csv")
-forested_area <- read.csv("Raw_Data/forest-area-km.csv")
-natural_disasters <- read.csv("Raw_Data/Natural_disasters.csv")
-unemployment_rate <- read_xls("Raw_Data/Labor_force.xls")
-```
+# Cleaning forested area dataset. We want to select the columns we want--they
+# are Entity (Country), Year and forested area. Then we want to rename Entity;
+# we will change it to Country so we can merge this dataset with the urban
+# population dataset by Country.
 
+forested_area <- forested_area_raw %>%
+  select(Entity, Year, Forest.area) %>%
+  rename(Country = Entity, forest_area = Forest.area)
 
-NATURAL DISASTERS
-
-```{r}
-# Cleaning natural_disasters data
-
-disasters <- natural_disasters %>%
-  select(-Entity) %>%
-  rename(Disaster_count = Number.of.disasters..EMDAT..2020..) %>%
-  mutate(Year = as.numeric(Year)) %>%
-  mutate(Disaster_count = as.numeric(Disaster_count))
-```
-
-
-FORESTED AREA AND UNEMPLOYMENT
-
-```{r}
-# Cleaning forested_area dataset
-forested <- forested_area %>%
-  select(-Code) %>%
-  rename(forested_area = Forest.area) %>%
-  rename(Country = Entity) 
-
-# Cleaning unemployment dataset
-unemployment <- unemployment_rate %>%
+  
+# Cleaning urban population dataset. We want to subset our dataset, selecting
+# only 1990 to 2019 because we want the time period to match that of the
+# forested area dataset. We also change Country Name to Country to match the
+# other dataset.
+urban_population <- urban_population_raw %>%
+  select(`Country Name`, c(`1990`:`2019`)) %>% 
   rename(Country = `Country Name`) %>%
-  pivot_longer(cols = c(`1990`:`2020`), names_to = "Year", values_to = "Unemployed") %>%
-  mutate(Year = as.integer(Year))
 
-# merging forested_area and unemployment
-For_v_Unemp <- forested %>%
- left_join(unemployment, by = c("Country", "Year")) %>%
-  drop_na(Unemployed)
+# Finally, we will use pivot_longer() to consolidate all urban population data
+# into one column called urban population. After we do this, we should see each
+# country appearing multiple times under the Country column because there a
+# different value for every year from 1990 to 2019.
   
-# plotting forested_area and unemployment
-For_v_Unemp_Plot <- For_v_Unemp  %>%
-  filter(Country == "Angola") %>%
-  ggplot(aes(x = forested_area, y = Unemployed)) +
-  geom_point() + 
-  geom_smooth(method = lm) +
-  theme_bw() +
-  labs(title = "Forested Area vs Number of People Unemployed",
-       subtitle = "Number of people unemployed decreases as forested area increases",
-       x = "Forested Area (sq. km)",
-       y = "Disease rate")
+  pivot_longer(cols = `1990`:`2019`, 
+               names_to = "Year",  
+               values_to = "urban_pop") %>%
+  mutate(Year = as.numeric(Year)) %>%  # We want to make sure Year is expressed as dbl so we can plot it later on.
+ 
+# We will then remove the rows we don't want. For some reason there are dataset
+# contains rows summarizing certain countries so we want to take those out and
+# just leave the individual countries. To do that, we will use pivot wider and
+# turn countries into columns, then use select() along with "-". I initially
+# tried filter() and "!" but it didn't work to remove the rows so now we will
+# remove them as columns.
+  
+  pivot_wider(names_from = Country, values_from = urban_pop) %>%
+  select(-c(`Arab World`, `Central Europe and the Baltics`, `East Asia & Pacific`, `Europe & Central Asia (excluding high income)`, `East Asia & Pacific (excluding high income)`, `Early-demographic dividend`, `Europe & Central Asia`, `European Union`, `Fragile and conflict affected situations`, `Euro area`, `High income`, `Heavily indebted poor countries (HIPC)`, `IBRD only`, `IDA & IBRD total`, `IDA total`, `IDA blend`, `IDA only`, `Not classified` ,`Latin America & Caribbean (excluding high income)`, `Latin America & Caribbean`, `Least developed countries: UN classification`, `Low income`, `Middle East & North Africa`, `Lower middle income`, `Low & middle income`, `Late-demographic dividend`, `Middle income`, `Middle East & North Africa (excluding high income)`, `OECD members`, `Pre-demographic dividend`, `Post-demographic dividend`, `Sub-Saharan Africa (excluding high income)`, `East Asia & Pacific (IDA & IBRD countries)`,`Europe & Central Asia (IDA & IBRD countries)`, `Latin America & the Caribbean (IDA & IBRD countries)`, `Middle East & North Africa (IDA & IBRD countries)`, `South Asia (IDA & IBRD)`, `Sub-Saharan Africa (IDA & IBRD countries)`)) %>%
 
-For_v_Unemp_Plot
+# Then we can use pivot_longer again to return to the format we want: 
+ pivot_longer(cols = Aruba:Zimbabwe, 
+               names_to = "Country",  
+               values_to = "urban_pop")
 
-
-# creating linear model
-lmUnemp = lm(Unemployed~forested_area, data = For_v_Unemp)
-summary(lmUnemp)
 
 ```
 
 
-FORESTED AREA AND DISEASE RATE
-
+Merging data for plotting. 
 ```{r}
-# cleaning disease_rate dataset
-disease <- disease_rate %>%
-  rename(disease_rate = DALYs..Disability.Adjusted.Life.Years....Communicable..maternal..neonatal..and.nutritional.diseases) %>%
-  rename(Country = Entity) 
+# Merging cleaned datasets for plotting. We want to join by Country and Year to 
+# make you sure our data line up properly
 
-# merging forested_area and unemployment
-For_v_Dis <- forested %>%
- left_join(disease, by = c("Country", "Year")) %>%
-  drop_na(disease_rate)
+pop_and_forest <- urban_population %>%
+  left_join(forested_area, by = c("Country", "Year")) %>%
+  drop_na()
 
-For_v_Dis_Plot <- For_v_Dis %>%
-  filter(Country == "Angola") %>%
-  ggplot(aes(x = forested_area, y = disease_rate)) +
-  geom_point() + 
-  geom_smooth(method = "lm") +
-  theme_bw() +
-  labs(title = "Forested Area vs Communicable Disease Rate",
-       subtitle = "Disease rate decreases as forested area increases",
-       x = "Forested Area (sq. km)",
-       y = "Disease rate")
-
-For_v_Dis_Plot
+# Note that we are not filtering to a specific country because we want shiny app
+# to do that. As a result, our plots below will look funky. To have a
+# better-looking graph, we have to use pipe the code above to 'filter(Country -
+# *choose a country*)'
 ```
 
-FORESTED AREA AND CRIMES
-
 ```{r}
-# cleaning crime_rate dataset
-crime <- crime_rate %>%
-  rename(Country = Entity, crime_rate = Deaths...Interpersonal.violence...Sex..Both...Age..All.Ages..Percent.) 
+# Below is a function we created to display linear equation and r-squared which
+# appears on our plots as we will see later.
 
-# merging forested_area and unemployment
-For_v_Crime <- forested %>%
- left_join(crime, by = c("Country", "Year")) %>%
-  drop_na(crime_rate)
-
-For_v_crime_Plot <- For_v_Crime %>%
-  filter(Country == "Angola") %>%
-  ggplot(aes(x = forested_area, y = crime_rate)) +
-  geom_point() + 
-  geom_smooth(method = "lm") +
-  theme_bw() +
-  labs(title = "Forested Area vs Crime Rates", 
-       subtitle = "Crime rate decreases as forested area increases",
-       x = "Forested Area (sq. km)",
-       y = "Crime rate")
-  
-For_v_crime_Plot
-  
-```
-
-NORESTED AREA AND NATURAL DISASTERS
-```{r}
-# Cleaning Natural Disasters and merging it with Forested Area 
-Forest_v_disasters <- forested %>%
-  pivot_wider(names_from = "Country", values_from = "forested_area") %>%
-  select(Year, World) %>%
-  left_join(disasters, by = "Year") %>%
-  select(World, Year, Disaster_count) 
-
-# Merging Natural Disasters and Forested Area 
-disasters_v_forest <- Forest_v_disasters %>% 
-  ggplot(aes(x = World, y = Disaster_count)) +
-  geom_point() +
-  geom_smooth(method = "lm") +
-  theme_bw() +
-  labs(title = "Forested Area vs Disaster Count Globally", 
-       subtitle = "Disaster count decreases as forested area increases",
-       x = "Forested Area (sq. km)",
-       y = "Number of Natural Disasters")
-  
-disasters_v_forest
+lm_eqn <- function(df){
+    m <- lm(df);
+    eq <- substitute(italic(y) == a + b %.% italic(x)*","
+                     ~~italic(r)^2~"="~r2,
+         list(a = format(unname(coef(m)[1]), digits = 2),
+              b = format(unname(coef(m)[2]), digits = 2),
+             r2 = format(summary(m)$r.squared, digits = 3)))
+    as.character(as.expression(eq));
+}
 
 ```
 
 
+PLOT: Forested area per country
+```{r}
+# We want to see the how forested area has changed in each country in the last
+# three decades.
+
+   country_forest_plot <- ggplot(data = pop_and_forest,
+               mapping = aes(x = Year, y = forest_area)) +
+      geom_point(size = 2, color = "palegreen4") +
+      geom_line(alpha = .5, color = "chartreuse3") +
+      labs(title = "Forested area in Selected Country (1990-2019)", 
+           x = "Year",
+           y = "Forested Area (sq. km)",
+           caption = "Source: The World Bank | Data") +
+      theme_minimal() +
+      scale_y_continuous(labels = scales::comma)
+
+country_forest_plot
+```
+
+PLOT: Urban population per country
 ```{r}
 
+Country_urban_pop_plot <-  pop_and_forest %>%
+   ggplot(aes(x = Year, y = urban_pop)) +
+   geom_point(size = 2, color = "mediumaquamarine") +
+   geom_line(alpha = .5, color = "cyan3") +
+   labs(title = "Urban population in Selected Country (1990-2019)", 
+        x = "Year",
+        y = "Urban Population",
+        caption = "Source: The World Bank | Data; \nOur World in Data") +
+  theme_minimal() +
+  scale_y_continuous(labels = scales::comma)
+
+Country_urban_pop_plot
+```
+
+PLOT: Urban population and forested area (Per country)
+
+```{r}
+# Plotting population and forested area. This plot shows use the correlation
+# between forested area and urban population in each country. Shiny App allows
+# us to choose any country.
+  
+pop_and_forest_plot <- pop_and_forest %>%
+   ggplot(aes(x = urban_pop, y = forest_area)) +
+   geom_point(color = "orange", size = 4) +
+      geom_smooth(se = FALSE, method = "lm", formula =  y ~ x, color = "chartreuse3") +
+   labs(title = "Correlation Between Forested Area and Urban Population",
+        subtitle = "There is a negative correlation between Forested Area and Urban Population (1990-2019)",
+        x = "Urban Population",
+        y = "Forested Area (sq. miles)",
+        caption = "Source: The World Bank | Data \nOur World in Data") +
+  theme_minimal() +
+  scale_x_continuous(labels = scales::comma) +
+  scale_y_continuous(labels = scales::comma)
+
+ pop_and_forest_plot
+
+```
+
+PLOT: Urban population (Global)
+
+```{r}
+
+# Cleaning original datasets again so we can plot our global data (not per country 
+# this time)
+
+# Let's start with urban population. First, we want to take our urban
+# population data and find the sum  of all countries. This will allow us to
+# see how the urban population globally has changed overtime.
+
+# Let's star by pasting the codes we used earlier to clean our urban population dataset.
+
+ 
+ World_urban_pop <- urban_population_raw %>%
+  select(`Country Name`, c(`1990`:`2019`)) %>% 
+  rename(Country = `Country Name`) %>%
+  pivot_longer(cols = `1990`:`2019`, 
+               names_to = "Year",  
+               values_to = "urban_pop") %>%
+
+# Since there is already a global summary for urban population in our raw
+# dataset under a "World", we will just filter.
+   
+   filter(Country == "World") %>%
+ 
+# We then select World summary and the year, the plot it ("Year" on the x axis
+# and "urban_pop" on the y). But to plot the Year on the x-axis, we have to
+# express "Year" as numeric.
+   select(Year, urban_pop) %>%
+   mutate(Year = as.numeric(Year)) 
+ 
+# Plotting
+ 
+World_urban_pop_plot <- World_urban_pop %>%
+   ggplot(aes(x = Year, y = urban_pop)) +
+   geom_point(color = "mediumaquamarine", size = 4) +
+         geom_smooth(method = "lm", formula = y~x, se = FALSE, color = "cyan3") +
+         labs(title = "Change in urban population globally (1990-2019)", 
+              subtitle = "Urban population globally increased between 1990 and 2019",
+              x = "Year",
+              y = "Urban Population",
+              caption = "Source: The World Bank | Data \nOur World in Data") +
+         theme_minimal() +
+         scale_y_continuous(labels = scales::comma)
+
+World_urban_pop_plot
+```
+
+PLOT: Forested Area (Global)
+
+```{r}
+# Plotting forested area globally. To clean, will just do the same what we did
+# above for urban population
+   
+World_forested_area <- forested_area %>% 
+  filter(Country == "World") %>%
+  mutate(Year = as.numeric(Year)) %>%
+  select(Year, forest_area)
+  
+# Plotting
+
+World_forested_area_plot <- World_forested_area %>%
+  ggplot(aes(x = Year, y = forest_area)) +
+  geom_point(color = "palegreen4", size = 4) +
+  geom_smooth(formula = y~x, method = "lm", se = FALSE, color = "chartreuse3") +
+  labs(title = "Forested area globally (1990-2019)", 
+        subtitle = "forest are globally decreased between 1990 and 2019",
+        x = "Year",
+        y = "Forested Area (sq.)",
+        caption = "Source: The World Bank | Data \nOur World in Data") +
+  theme_minimal() +
+  scale_y_continuous(labels = scales::comma) 
+
+World_forested_area_plot
+
+```
+
+PLOT: Urban population and forested area (Global)
+
+```{r}
+# Now we will see how global forested area and global urban population
+# correlate. We will begin by merging the two datasets we cleaned above.
+
+World_pop_forest <- World_forested_area %>%
+left_join(World_urban_pop, by = "Year") %>%
+  select(urban_pop, forest_area,  Year) %>%
+  drop_na()
+
+
+World_pop_forest_plot <- World_pop_forest %>%
+  ggplot(aes(x = urban_pop, y = forest_area)) +
+  geom_point(color = "orange", size = 4) +
+  geom_smooth(formula = y~x, method = "lm", se = FALSE, color = "chartreuse3") +
+  labs(title = "Correlation Between Forested Area and Urban Population", 
+        subtitle = "There is a negative correlation between Forested Area and Urban Population (1990-2019)",
+        x = "Urban Population",
+        y = "Forested Area (sq. miles)",
+        caption = "Source: The World Bank | Data \nOur World in Data") +
+  theme_minimal() +
+  scale_x_continuous(labels = scales::comma) +
+  scale_y_continuous(labels = scales::comma)
+
+World_pop_forest_plot  
+
+```
+MODELS: Show relationship between urban population and forested area
+
+```{r}
+
+# We want to re-merge the two original datasets (by Country
+# and Year to make sure that they line up properly) in order to create a model
+# showing their relationship.
+
+  pop_and_forest_1 <- urban_population %>%
+  left_join(forested_area, by = c("Country", "Year")) %>%
+  drop_na()
+
+# Taking World_pop_and_forest (While we created earlier) to create a model for
+# global forested area and global urban population
+
+# Since stan_glm() takes a while to load, it can slow down our shiny app. Thus,
+# we will comment out our code for our model below. Anyway, we have already
+# created a table showing the output.
+
+
+
+ World_model <- stan_glm(data = World_pop_forest_1,
+                            refresh = 0,
+                            formula = forest_area ~ urban_pop + Year)
+
+ print(World_model, digits = 5)
+ 
+ # We converted Model_2 to a tibble  so we can load it quickly on shiny and not have have to run stan_glm all the time we open the app.
+    
+ Model_1 <- tibble(Predictors = c("Urban Population", "Year"),
+                   Median = c("1.500000e-04", "-1.655202e+04"))
+ 
+ 
+# Taking pop_and_forest to create a model that shows the relationship between
+# forested area and urban population for each country. We will also comment out our model codes because we have exported our output results.
+
+  Country_model <- stan_glm(data = pop_and_forest_1 ,
+                               refresh = 0,
+                               formula = forest_area ~ urban_pop + Country)
+
+  Country_Model <- print(Country_model, digits = 5) %>%
+       as_tibble()
+
+
+Model_2 <- Country_Model %>%
+   select(-c(`(Intercept)` ,sigma)) %>%
+       pivot_longer(cols = urban_pop:CountryZimbabwe,
+                    names_to = "Predictors",
+                    values_to = "Median") %>%
+   group_by(Predictors) %>%
+   summarize(Median = mean(Median), .groups = "drop")
+Model_2
+
+# We converted Model_2 to an excel so we can load it quickly on shiny and not have have to run stan_glm all the time we open the app.
+
+ model_output <- read_excel("Raw_Data/Model_output.xlsx")
+ model_output 
+ 
+```
+
+```{r}
 ```
 
