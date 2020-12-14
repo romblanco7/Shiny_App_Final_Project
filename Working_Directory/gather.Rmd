@@ -14,7 +14,7 @@ library(rstanarm)
 library(infer)
 ```
 
-LOADING DATASETS
+# LOADING DATASETS
 ```{r}
 forested_area_raw <- read.csv("Raw_Data/forest-area-km.csv")
 urban_population_raw <- read_excel("Raw_Data/Urban_population.xls") 
@@ -22,7 +22,7 @@ urban_population_raw <- read_excel("Raw_Data/Urban_population.xls")
 ```
 
 
-CLEANING DATASETS
+# CLEANING DATASETS
 ```{r}
 # Cleaning forested area dataset. We want to select the columns we want--they
 # are Entity (Country), Year and forested area. Then we want to rename Entity;
@@ -71,7 +71,7 @@ urban_population <- urban_population_raw %>%
 ```
 
 
-Merging data for plotting. 
+# Merging data for plotting. 
 ```{r}
 # Merging cleaned datasets for plotting. We want to join by Country and Year to 
 # make you sure our data line up properly
@@ -103,7 +103,10 @@ lm_eqn <- function(df){
 ```
 
 
-PLOT: Forested area per country
+# PLOT: Forested area per country
+# We want to create the plots here first so we can test run them before pasting the codes into shiny.
+
+
 ```{r}
 # We want to see the how forested area has changed in each country in the last
 # three decades.
@@ -139,7 +142,7 @@ Country_urban_pop_plot <-  pop_and_forest %>%
 Country_urban_pop_plot
 ```
 
-PLOT: Urban population and forested area (Per country)
+# PLOT: Urban population and forested area (Per country)
 
 ```{r}
 # Plotting population and forested area. This plot shows use the correlation
@@ -163,7 +166,7 @@ pop_and_forest_plot <- pop_and_forest %>%
 
 ```
 
-PLOT: Urban population (Global)
+# PLOT: Urban population (Global)
 
 ```{r}
 
@@ -212,7 +215,7 @@ World_urban_pop_plot <- World_urban_pop %>%
 World_urban_pop_plot
 ```
 
-PLOT: Forested Area (Global)
+# PLOT: Forested Area (Global)
 
 ```{r}
 # Plotting forested area globally. To clean, will just do the same what we did
@@ -241,7 +244,7 @@ World_forested_area_plot
 
 ```
 
-PLOT: Urban population and forested area (Global)
+# PLOT: Urban population and forested area (Global)
 
 ```{r}
 # Now we will see how global forested area and global urban population
@@ -269,7 +272,7 @@ World_pop_forest_plot <- World_pop_forest %>%
 World_pop_forest_plot  
 
 ```
-MODELS: Show relationship between urban population and forested area
+# MODELS: Show relationship between urban population and forested area
 
 ```{r}
 
