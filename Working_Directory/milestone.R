@@ -313,6 +313,8 @@ We also noticed that  in some countries, change in urban population affects fore
                                     
 server <- function(input, output, session) {
   
+  # We are pasting these the plots we created in gather.Rmd. Explanations are in the Rmd file because we want this section to be clean so we can easily spot the error when shiny fails to work. 
+  
      output$plot_1 <- renderPlot({
         ggplot(data = World_urban_pop,
                mapping = aes(x = Year, y = urban_pop)) +
